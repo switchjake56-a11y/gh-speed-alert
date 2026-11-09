@@ -1,0 +1,52 @@
+name: Build GH SPEED ALERT APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v4
+
+      - name: Locate Flutter project
+        run: |
+          PROJECT_DIR=$(find . -name pubspec.yaml -not -path '*/.dart_tool/*' | head -n 1 | xargs dirname)
+          if [ -z "$PROJECT_DIR" ]; then
+            echo "Flutter project not found"
+            exit 1
+          fi
+          echo "FLUTTER_PROJECT_DIR=$PROJECT_DIR" >> $GITHUB_ENV
+
+      - name: Install Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Get dependencies
+        run: flutter pub get
+        working-directory: ${{ env.FLUTTER_PROJECT_DIR }}
+
+      - name: Build Android APK
+        run: flutter build apk --release
+        working-directory: ${{ env.FLUTTER_PROJECT_DIR }}
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: GH-SPEED-ALERT-APK
+          path: ${{ env.FLUTTER_PROJECT_DIR }}/build/app/outputs/flutter-apk/app-release.apk
